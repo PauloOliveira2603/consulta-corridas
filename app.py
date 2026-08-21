@@ -10,9 +10,13 @@ st.set_page_config(page_title="Consulta de Dados", layout="centered")
 st.markdown(
     """
     <style>
+    /* Compacta o topo da página para telas de celular */
     .block-container { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; padding-left: 1rem; padding-right: 1rem; }
-    .custom-title { font-size: 26px !important; font-weight: bold !important; color: #0f4c81 !important; text-align: center !important; margin-top: 5px !important; margin-bottom: 5px !important; padding: 0px !important; width: 100%; display: block; }
+    
+    /* Alinha o texto explicativo à esquerda com margem colada abaixo */
     .custom-text { text-align: left !important; font-size: 14px !important; margin-top: 0px !important; margin-bottom: 2px !important; color: #444444 !important; font-weight: 500; }
+    
+    /* Estilização da caixa de entrada de texto */
     div[data-testid="stTextInput"] input { font-size: 18px !important; height: 45px !important; }
     div.stDownloadButton { margin-bottom: 4px !important; margin-top: 2px !important; }
     hr { margin-top: 4px !important; margin-bottom: 6px !important; }
@@ -106,8 +110,8 @@ def gerar_pdf(dados_df):
         return io.BytesIO(pdf_output.encode('latin1'))
     return io.BytesIO(pdf_output)
 
-# 4. Interface Prática e Limpa para o Celular
-st.markdown('<div class="custom-title">Consulta de Corridas</div>', unsafe_allow_html=True)
+# 4. Desenho da Interface Prática (Uso de comando nativo para blindar o título)
+st.markdown("<h1 style='text-align: center; color: #0f4c81; font-size: 28px; margin-bottom: 5px; margin-top: 0px;'>Consulta de Corridas</h1>", unsafe_allow_html=True)
 
 if not df_base.empty:
     pdf_bytes = gerar_pdf(df_base)
