@@ -50,33 +50,23 @@ def carregar_dados_do_excel():
 
 df_base = carregar_dados_do_excel()
 
-# 3. Classe do PDF Ajustada com Textos Centralizados à Direita da Logo
+# 3. Classe do PDF Ajustada: Centralização Matemática Corrigida (Margens Fixas)
 class PDF_Relatorio(FPDF):
     def header(self):
         if os.path.exists(NOME_LOGOTIPO):
-            # Posiciona a imagem à esquerda
             self.image(NOME_LOGOTIPO, x=10, y=10, w=30)
-            # Define o início do texto após a imagem (X=45) e alinha verticalmente
-            self.set_xy(42, 16)
-            largura_texto = 158
-        else:
-            self.set_xy(10, 15)
-            largura_texto = 190
-            
-        # Título principal centralizado no bloco da direita
+        
+        # Correção da Centralização: Independentemente de ter logo ou não, o título usa a largura total restante (160mm)
+        # e centraliza o texto exatamente dentro desse bloco, evitando que ele vá muito para a direita
+        self.set_xy(40, 16)
         self.set_font("Arial", "B", 15)
-        self.cell(largura_texto, 8, "RELATÓRIO GERAL DE CORRIDAS", ln=True, align="C")
+        self.cell(160, 8, "RELATÓRIO GERAL DE CORRIDAS", ln=True, align="C")
         
-        if os.path.exists(NOME_LOGOTIPO):
-            self.set_x(42)
-        else:
-            self.set_x(10)
-            
-        # Subtítulo explicativo centralizado no bloco da direita
+        self.set_x(40)
         self.set_font("Arial", "", 9)
-        self.cell(largura_texto, 5, "Documento gerado automaticamente pelo aplicativo de busca.", ln=True, align="C")
+        self.cell(160, 5, "Documento gerado automaticamente pelo aplicativo de busca.", ln=True, align="C")
         
-        # Margem fixa segura para iniciar a tabela de dados
+        # Margem de segurança rígida para soltar a tabela de dados
         self.set_y(38)
         
         self.set_font("Arial", "B", 10)
@@ -120,11 +110,13 @@ def gerar_pdf(dados_df):
     return io.BytesIO(pdf_output)
 
 # 4. Desenho da Interface Final
-# Método infalível usando Base64 HTML para forçar a renderização do logo e quebrar o cache do site
+# Força a conversão do arquivo usando PIL antes de transformar em base64 (corrige o bug de formato renomeado)
 if os.path.exists(NOME_LOGOTIPO):
     try:
-        with open(NOME_LOGOTIPO, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read()).decode()
+        img_pil = Image.open(NOME_LOGOTIPO)
+        buffer = io.BytesIO()
+        img_pil.save(buffer, format="PNG") # Força a conversão real em código de memória PNG
+        encoded_string = base64.b64encode(buffer.getvalue()).decode()
         st.markdown(
             f'<div class="logo-container"><img src="data:image/png;base64,{encoded_string}" width="50"></div>',
             unsafe_allow_html=True
