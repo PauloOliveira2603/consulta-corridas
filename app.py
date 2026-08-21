@@ -4,21 +4,27 @@ import pandas as pd
 import streamlit as st
 from fpdf import FPDF
 
-# 1. Configurações Visuais para Celular (Margem do topo corrigida para não cortar o título)
+# 1. Configurações Visuais para Celular (Alinhamento Central Perfeito)
 st.set_page_config(page_title="Consulta de Dados", layout="centered")
 
 st.markdown(
     """
     <style>
-    /* CORREÇÃO DO CORTE: Aumentado o padding-top de 0.5rem para 2.0rem para o título respirar */
+    /* Compacta as margens da página */
     .block-container { padding-top: 2.0rem !important; padding-bottom: 0.5rem !important; padding-left: 1rem; padding-right: 1rem; }
+    
+    /* TRUQUE DO ALINHAMENTO: Força o título a se alinhar de forma absoluta ao centro da tela */
+    .custom-title { font-size: 28px !important; font-weight: bold !important; color: #0f4c81 !important; text-align: center !important; margin-top: 0px !important; margin-bottom: 12px !important; padding: 0px !important; width: 100%; display: block; }
+    
+    /* Força o botão de download a ficar centralizado e com a mesma simetria do título */
+    div.stDownloadButton { display: flex; justify-content: center; margin-bottom: 4px !important; margin-top: 2px !important; width: 100%; }
+    div.stDownloadButton button { margin: 0 auto !important; display: block !important; }
     
     /* Alinha o texto explicativo à esquerda com margem colada abaixo */
     .custom-text { text-align: left !important; font-size: 14px !important; margin-top: 0px !important; margin-bottom: 2px !important; color: #444444 !important; font-weight: 500; }
     
-    /* Estilização da caixa de entrada de texto e botões */
+    /* Estilização da caixa de entrada de texto */
     div[data-testid="stTextInput"] input { font-size: 18px !important; height: 45px !important; }
-    div.stDownloadButton { margin-bottom: 4px !important; margin-top: 2px !important; }
     hr { margin-top: 4px !important; margin-bottom: 6px !important; }
     </style>
     """,
@@ -110,8 +116,9 @@ def gerar_pdf(dados_df):
         return io.BytesIO(pdf_output.encode('latin1'))
     return io.BytesIO(pdf_output)
 
-# 4. Desenho da Interface Prática (Uso de comando nativo para blindar o título)
-st.markdown("<h1 style='text-align: center; color: #0f4c81; font-size: 28px; margin-bottom: 8px; margin-top: 0px;'>Consulta de Corridas</h1>", unsafe_allow_html=True)
+# 4. Desenho da Interface Prática
+# Título em bloco HTML para garantir o alinhamento central absoluto
+st.markdown('<div class="custom-title">Consulta de Corridas</div>', unsafe_allow_html=True)
 
 if not df_base.empty:
     pdf_bytes = gerar_pdf(df_base)
