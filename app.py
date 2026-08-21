@@ -10,12 +10,11 @@ st.set_page_config(page_title="Consulta de Dados", layout="centered")
 st.markdown(
     """
     <style>
-    .block-container { padding-top: 0.2rem !important; padding-bottom: 0.5rem !important; padding-left: 1rem; padding-right: 1rem; }
-    .custom-title { font-size: 26px !important; font-weight: bold !important; color: #0f4c81 !important; text-align: center !important; margin-top: 2px !important; margin-bottom: 2px !important; padding: 0px !important; }
+    .block-container { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; padding-left: 1rem; padding-right: 1rem; }
+    .custom-title { font-size: 26px !important; font-weight: bold !important; color: #0f4c81 !important; text-align: center !important; margin-top: 5px !important; margin-bottom: 5px !important; padding: 0px !important; }
     .custom-text { text-align: left !important; font-size: 14px !important; margin-top: 0px !important; margin-bottom: 2px !important; color: #444444 !important; font-weight: 500; }
     div[data-testid="stTextInput"] input { font-size: 18px !important; height: 45px !important; }
     div.stDownloadButton { margin-bottom: 4px !important; margin-top: 2px !important; }
-    .logo-container { display: flex; justify-content: center; margin-bottom: 5px; }
     hr { margin-top: 4px !important; margin-bottom: 6px !important; }
     </style>
     """,
@@ -23,9 +22,7 @@ st.markdown(
 )
 
 NOME_ARQUIVO_EXCEL = "Controle corridas NOVO.xlsx"
-
-# Link público e direto da imagem do carro hospedada no seu próprio GitHub
-URL_LOGOTIPO = "https://githubusercontent.com"
+NOME_LOGOTIPO = "logotipo.png"
 
 # 2. Função para carregar e limpar a base de dados
 @st.cache_data(ttl=30)
@@ -50,26 +47,28 @@ def carregar_dados_do_excel():
 
 df_base = carregar_dados_do_excel()
 
-# 3. Classe do PDF com Centralização Matemática Corrigida (Margens Totais)
+# 3. Classe do PDF com Centralização Independente do Logotipo
 class PDF_Relatorio(FPDF):
     def header(self):
-        # Desenha a imagem no canto esquerdo usando a URL direta da internet
-        try:
-            self.image(URL_LOGOTIPO, x=15, y=10, w=30)
-        except:
-            pass
+        # 1. Carrega o logo na esquerda de forma independente (não altera as margens do texto)
+        if os.path.exists(NOME_LOGOTIPO):
+            try:
+                self.image(NOME_LOGOTIPO, x=10, y=10, w=30)
+            except:
+                pass
         
-        # Joga o título para começar abaixo da linha do logo (Y=16) ocupando a folha toda
+        # 2. Reseta o cursor para a margem padrão (X=10) ignorando a presença do logotipo
         self.set_xy(10, 16)
+        
+        # 3. Centraliza os textos usando a largura total útil da página A4 (190mm)
         self.set_font("Arial", "B", 15)
-        # O tamanho 200 força o texto a se centralizar usando as duas extremidades da folha como base
-        self.cell(200, 8, "RELATÓRIO GERAL DE CORRIDAS", ln=True, align="C")
+        self.cell(190, 8, "RELATÓRIO GERAL DE CORRIDAS", ln=True, align="C")
         
         self.set_x(10)
         self.set_font("Arial", "", 9)
-        self.cell(200, 5, "Documento gerado automaticamente pelo aplicativo de busca.", ln=True, align="C")
+        self.cell(190, 5, "Documento gerado automaticamente pelo aplicativo de busca.", ln=True, align="C")
         
-        # Margem rígida para iniciar a tabela sem sobreposição
+        # Garante espaço para a tabela começar abaixo do cabeçalho
         self.set_y(40)
         
         self.set_font("Arial", "B", 10)
@@ -112,12 +111,7 @@ def gerar_pdf(dados_df):
         return io.BytesIO(pdf_output.encode('latin1'))
     return io.BytesIO(pdf_output)
 
-# 4. Desenho da Interface Final (Renderização via URL)
-st.markdown(
-    f'<div class="logo-container"><img src="{URL_LOGOTIPO}" width="55"></div>',
-    unsafe_allow_html=True
-)
-
+# 4. Interface Prática e Limpa para o Celular (Sem Logo)
 st.markdown('<div class="custom-title">Consulta de Corridas</div>', unsafe_allow_html=True)
 
 if not df_base.empty:
