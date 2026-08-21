@@ -41,7 +41,7 @@ def carregar_dados_do_excel():
 
 df_base = carregar_dados_do_excel()
 
-# 3. Função Corrigida e Atualizada para Gerar o Relatório PDF em Bytes Reais
+# 3. Função Corrigida para a Nova Versão do FPDF2
 def gerar_pdf(dados_df):
     pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -85,10 +85,13 @@ def gerar_pdf(dados_df):
         pdf.cell(25, 7, str(row['CEP']), border=1, align="C")
         pdf.ln()
         
-    # Retorna o arquivo de forma limpa usando a memória em formato binário estável
-    return io.BytesIO(pdf.output().encode('latin1'))
+    # CORREÇÃO DA LINHA 89: pdf.output() já retorna bytes direto nas novas versões do fpdf2
+    pdf_output = pdf.output()
+    if isinstance(pdf_output, str):
+        return io.BytesIO(pdf_output.encode('latin1'))
+    return io.BytesIO(pdf_output)
 
-# 4. CORREÇÃO DA LINHA 91: Adicionado o número 2 dentro de st.columns()
+# 4. Desenho da Interface
 col1, col2 = st.columns(2)
 with col1:
     if os.path.exists(NOME_LOGOTIPO):
