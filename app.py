@@ -3,6 +3,7 @@ import io
 import pandas as pd
 import streamlit as st
 from fpdf import FPDF
+from PIL import Image
 
 # 1. Configurações Visuais para Celular
 st.set_page_config(page_title="Consulta de Dados", layout="centered")
@@ -12,10 +13,7 @@ st.markdown(
     <style>
     .block-container { padding-top: 0.2rem !important; padding-bottom: 0.5rem !important; padding-left: 1rem; padding-right: 1rem; }
     .custom-title { font-size: 26px !important; font-weight: bold !important; color: #0f4c81 !important; text-align: center !important; margin-top: 2px !important; margin-bottom: 2px !important; padding: 0px !important; }
-    
-    /* CORREÇÃO DO ALINHAMENTO: Força o texto explicativo a ficar alinhado à esquerda com margem colada abaixo */
     .custom-text { text-align: left !important; font-size: 14px !important; margin-top: 0px !important; margin-bottom: 2px !important; color: #444444 !important; font-weight: 500; }
-    
     div[data-testid="stTextInput"] input { font-size: 18px !important; height: 45px !important; }
     div.stDownloadButton { margin-bottom: 4px !important; margin-top: 2px !important; }
     div[data-testid="stImage"] { display: flex; justify-content: center; margin-bottom: 2px !important; }
@@ -28,7 +26,7 @@ st.markdown(
 NOME_ARQUIVO_EXCEL = "Controle corridas NOVO.xlsx"
 NOME_LOGOTIPO = "logotipo.png"
 
-# 2. Função Inteligente para carregar e limpar a base de dados
+# 2. Função para carregar e limpar a base de dados
 @st.cache_data(ttl=30)
 def carregar_dados_do_excel():
     if not os.path.exists(NOME_ARQUIVO_EXCEL):
@@ -51,20 +49,29 @@ def carregar_dados_do_excel():
 
 df_base = carregar_dados_do_excel()
 
-# 3. Classe do PDF para Gerenciar Cabeçalhos Repetitivos e Numeração Total (X de Y)
+# 3. Classe do PDF Ajustada com Cabeçalho Compacto (Logo na Esquerda e Título Alinhado)
 class PDF_Relatorio(FPDF):
     def header(self):
+        # Caso exista logo, posiciona na esquerda e coloca o título ao lado reduzindo o espaço vertical
         if os.path.exists(NOME_LOGOTIPO):
             self.image(NOME_LOGOTIPO, x=10, y=10, w=30)
-            self.set_y(45)
+            self.set_xy(45, 15) # Move o cursor para o lado da imagem (X=45) e topo (Y=15)
         else:
-            self.set_y(15)
+            self.set_xy(10, 15)
             
-        self.set_font("Arial", "B", 16)
-        self.cell(0, 10, "RELATÓRIO GERAL DE CORRIDAS", ln=True, align="C")
-        self.set_font("Arial", "", 10)
-        self.cell(0, 5, "Documento gerado automaticamente pelo aplicativo de busca.", ln=True, align="C")
-        self.ln(5)
+        self.set_font("Arial", "B", 15)
+        self.cell(150, 8, "RELATÓRIO GERAL DE CORRIDAS", ln=True, align="L")
+        
+        if os.path.exists(NOME_LOGOTIPO):
+            self.set_x(45)
+        else:
+            self.set_x(10)
+            
+        self.set_font("Arial", "", 9)
+        self.cell(150, 5, "Documento gerado automaticamente pelo aplicativo de busca.", ln=True, align="L")
+        
+        # Define uma linha limite firme antes de começar a tabela
+        self.set_y(38)
         
         self.set_font("Arial", "B", 10)
         self.set_fill_color(230, 230, 230)
@@ -107,8 +114,13 @@ def gerar_pdf(dados_df):
     return io.BytesIO(pdf_output)
 
 # 4. Desenho da Interface Final
+# Força a abertura real do arquivo de imagem para evitar travamentos de cache na tela
 if os.path.exists(NOME_LOGOTIPO):
-    st.image(NOME_LOGOTIPO, width=50)
+    try:
+        img_tela = Image.open(NOME_LOGOTIPO)
+        st.image(img_tela, width=50)
+    except:
+        pass
 
 st.markdown('<div class="custom-title">Consulta de Corridas</div>', unsafe_allow_html=True)
 
@@ -124,10 +136,8 @@ if not df_base.empty:
 
 st.write("---")
 
-# CORREÇÃO DA POSIÇÃO E ALINHAMENTO: Texto movido para cá e estilizado à esquerda
 st.markdown('<div class="custom-text">Digite qualquer parte da Rua, Bairro ou CEP.</div>', unsafe_allow_html=True)
 
-# Campo de busca interativo colado logo em seguida
 busca = st.text_input("Digite sua busca aqui:", value="", placeholder="Ex: lig, realengo...")
 
 if busca.strip() != "" and not df_base.empty:
