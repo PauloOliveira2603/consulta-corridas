@@ -30,7 +30,8 @@ def carregar_dados_do_excel():
         df["Bairro"] = df["Bairro"].astype(str).str.strip()
         df["CEP"] = df["CEP"].astype(str).str.strip()
         df["KM"] = df["KM"].astype(str).str.replace('"', '', regex=False).str.replace('.', ',', regex=False)
-        # Mantém uma coluna numérica oculta para o PDF e cria a versão formatada para a tela
+        
+        # Cria versão numérica estável para o PDF e formata o preço para exibição visual
         df["Valor_Num"] = pd.to_numeric(df["Valor"], errors='coerce').fillna(0.0)
         df["Valor_Tela"] = df["Valor_Num"].map(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         return df
@@ -39,7 +40,7 @@ def carregar_dados_do_excel():
 
 df_base = carregar_dados_do_excel()
 
-# 3. Função Inteligente para Gerar o Relatório PDF
+# 3. Função Corrigida para Gerar o Relatório PDF convertido em Bytes
 def gerar_pdf(dados_df):
     pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -73,28 +74,28 @@ def gerar_pdf(dados_df):
     # Linhas da Tabela
     pdf.set_font("Arial", "", 9)
     for _, row in dados_df.iterrows():
-        # Formata o valor monetário para o padrão brasileiro dentro do PDF
         valor_formatado = f"R$ {row['Valor_Num']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         
         pdf.cell(15, 7, str(row['Grupo']), border=1, align="C")
-        pdf.cell(75, 7, str(row['Rua'])[:38], border=1) # Limita caracteres para não estourar a folha
+        pdf.cell(75, 7, str(row['Rua'])[:38], border=1) # Limita os caracteres da rua para não quebrar a folha
         pdf.cell(25, 7, valor_formatado, border=1, align="C")
         pdf.cell(20, 7, str(row['KM']), border=1, align="C")
         pdf.cell(30, 7, str(row['Bairro'])[:15], border=1)
         pdf.cell(25, 7, str(row['CEP']), border=1, align="C")
         pdf.ln()
         
-    return pdf.output()
+    # CORREÇÃO CRUCIAL: Retorna os dados como bytearray bruto exigido pelo Streamlit
+    return bytearray(pdf.output())
 
 # 4. Desenho da Tela do Aplicativo (Com Logotipo Superior)
-col1, col2 = st.columns([1, 3])
+col1, col2 = st.columns()
 with col1:
     if os.path.exists(NOME_LOGOTIPO):
         st.image(NOME_LOGOTIPO, width=90)
 with col2:
     st.title("Consulta de Corridas")
 
-# Botão de Download do PDF (Custo Zero e Ilimitado)
+# Botão de Download do PDF Dinâmico
 if not df_base.empty:
     pdf_bytes = gerar_pdf(df_base)
     st.download_button(
