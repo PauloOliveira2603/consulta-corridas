@@ -11,7 +11,7 @@ st.markdown(
     """
     <style>
     .block-container { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; padding-left: 1rem; padding-right: 1rem; }
-    .custom-title { font-size: 26px !important; font-weight: bold !important; color: #0f4c81 !important; text-align: center !important; margin-top: 5px !important; margin-bottom: 5px !important; padding: 0px !important; }
+    .custom-title { font-size: 26px !important; font-weight: bold !important; color: #0f4c81 !important; text-align: center !important; margin-top: 5px !important; margin-bottom: 5px !important; padding: 0px !important; width: 100%; display: block; }
     .custom-text { text-align: left !important; font-size: 14px !important; margin-top: 0px !important; margin-bottom: 2px !important; color: #444444 !important; font-weight: 500; }
     div[data-testid="stTextInput"] input { font-size: 18px !important; height: 45px !important; }
     div.stDownloadButton { margin-bottom: 4px !important; margin-top: 2px !important; }
@@ -50,17 +50,13 @@ df_base = carregar_dados_do_excel()
 # 3. Classe do PDF com Centralização Independente do Logotipo
 class PDF_Relatorio(FPDF):
     def header(self):
-        # 1. Carrega o logo na esquerda de forma independente (não altera as margens do texto)
         if os.path.exists(NOME_LOGOTIPO):
             try:
                 self.image(NOME_LOGOTIPO, x=10, y=10, w=30)
             except:
                 pass
         
-        # 2. Reseta o cursor para a margem padrão (X=10) ignorando a presença do logotipo
         self.set_xy(10, 16)
-        
-        # 3. Centraliza os textos usando a largura total útil da página A4 (190mm)
         self.set_font("Arial", "B", 15)
         self.cell(190, 8, "RELATÓRIO GERAL DE CORRIDAS", ln=True, align="C")
         
@@ -68,7 +64,6 @@ class PDF_Relatorio(FPDF):
         self.set_font("Arial", "", 9)
         self.cell(190, 5, "Documento gerado automaticamente pelo aplicativo de busca.", ln=True, align="C")
         
-        # Garante espaço para a tabela começar abaixo do cabeçalho
         self.set_y(40)
         
         self.set_font("Arial", "B", 10)
@@ -111,7 +106,7 @@ def gerar_pdf(dados_df):
         return io.BytesIO(pdf_output.encode('latin1'))
     return io.BytesIO(pdf_output)
 
-# 4. Interface Prática e Limpa para o Celular (Sem Logo)
+# 4. Interface Prática e Limpa para o Celular
 st.markdown('<div class="custom-title">Consulta de Corridas</div>', unsafe_allow_html=True)
 
 if not df_base.empty:
