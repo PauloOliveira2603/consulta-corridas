@@ -4,14 +4,26 @@ import pandas as pd
 import streamlit as st
 from fpdf import FPDF
 
-# 1. Configurações Visuais para Celular
+# 1. Configurações Visuais para Celular e Redução Extrema de Espaços (Margens)
 st.set_page_config(page_title="Consulta de Dados", layout="centered")
 
 st.markdown(
     """
     <style>
-    .block-container { padding-top: 1rem; padding-bottom: 1rem; padding-left: 1rem; padding-right: 1rem; }
+    /* Reduz o espaço em branco no topo de toda a página */
+    .block-container { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; padding-left: 1rem; padding-right: 1rem; }
+    
+    /* Configuração do campo de digitação */
     div[data-testid="stTextInput"] input { font-size: 18px !important; height: 45px !important; }
+    
+    /* Junta o título e textos compactando as margens */
+    .stTitle { font-size: 24px !important; text-align: center !important; margin-top: 0px !important; margin-bottom: 2px !important; padding: 0px !important; }
+    .stWrite, p { text-align: center !important; margin-top: 0px !important; margin-bottom: 5px !important; padding: 0px !important; }
+    
+    /* Espaçamento colado para a linha divisória e elementos secundários */
+    hr { margin-top: 5px !important; margin-bottom: 10px !important; }
+    div[data-testid="stImage"] { margin-bottom: 2px !important; }
+    div.stDownloadButton { margin-bottom: 5px !important; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -27,6 +39,10 @@ def carregar_dados_do_excel():
         return pd.DataFrame()
     try:
         df = pd.read_excel(NOME_ARQUIVO_EXCEL, sheet_name="Base")
+        
+        # Remove linhas fantasmas do Excel onde a Rua está em branco
+        df = df.dropna(subset=["Rua"])
+        
         df["Rua"] = df["Rua"].astype(str).str.strip()
         df["Bairro"] = df["Bairro"].astype(str).str.strip()
         df["CEP"] = df["CEP"].astype(str).str.strip()
@@ -41,7 +57,7 @@ def carregar_dados_do_excel():
 
 df_base = carregar_dados_do_excel()
 
-# 3. Função Corrigida para a Nova Versão do FPDF2
+# 3. Função para Gerar o Relatório PDF
 def gerar_pdf(dados_df):
     pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -49,8 +65,8 @@ def gerar_pdf(dados_df):
     
     # Adiciona o Logotipo no Canto Esquerdo se o arquivo existir
     if os.path.exists(NOME_LOGOTIPO):
-        pdf.image(NOME_LOGOTIPO, x=10, y=10, w=30) # Posição X=10, Y=10, Largura=30mm
-        pdf.set_y(45) # Joga o texto abaixo do logotipo para não encavalar
+        pdf.image(NOME_LOGOTIPO, x=10, y=10, w=30)
+        pdf.set_y(45)
     else:
         pdf.set_y(15)
         
@@ -77,27 +93,26 @@ def gerar_pdf(dados_df):
     for _, row in dados_df.iterrows():
         valor_formatado = f"R$ {row['Valor_Num']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         
-        pdf.cell(15, 7, str(row['Grupo']), border=1, align="C")
-        pdf.cell(75, 7, str(row['Rua'])[:38], border=1) # Limita os caracteres da rua para não quebrar a folha
+        pdf.cell(15, 7, str(int(row['Grupo'])), border=1, align="C")
+        pdf.cell(75, 7, str(row['Rua'])[:38], border=1)
         pdf.cell(25, 7, valor_formatado, border=1, align="C")
         pdf.cell(20, 7, str(row['KM']), border=1, align="C")
         pdf.cell(30, 7, str(row['Bairro'])[:15], border=1)
         pdf.cell(25, 7, str(row['CEP']), border=1, align="C")
         pdf.ln()
         
-    # CORREÇÃO DA LINHA 89: pdf.output() já retorna bytes direto nas novas versões do fpdf2
     pdf_output = pdf.output()
     if isinstance(pdf_output, str):
         return io.BytesIO(pdf_output.encode('latin1'))
     return io.BytesIO(pdf_output)
 
-# 4. Desenho da Interface
-col1, col2 = st.columns(2)
-with col1:
-    if os.path.exists(NOME_LOGOTIPO):
-        st.image(NOME_LOGOTIPO, width=90)
-with col2:
-    st.title("Consulta de Corridas")
+# 4. Desenho da Interface Compacta para Celular
+# Logotipo bem pequeno (apenas detalhe) e centralizado
+if os.path.exists(NOME_LOGOTIPO):
+    st.image(NOME_LOGOTIPO, width=55)
+
+st.title("Consulta de Corridas")
+st.write("Digite qualquer parte da Rua, Bairro ou CEP.")
 
 # Botão de Download do PDF Dinâmico
 if not df_base.empty:
@@ -112,7 +127,7 @@ if not df_base.empty:
 
 st.write("---")
 
-# Campo de busca interativo
+# Campo de busca interativo colado logo abaixo
 busca = st.text_input("Digite sua busca aqui:", value="", placeholder="Ex: lig, realengo...")
 
 if busca.strip() != "" and not df_base.empty:
