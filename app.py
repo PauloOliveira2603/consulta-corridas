@@ -1,5 +1,6 @@
 import os
 import io
+import base64
 import pandas as pd
 import streamlit as st
 from fpdf import FPDF
@@ -16,7 +17,7 @@ st.markdown(
     .custom-text { text-align: left !important; font-size: 14px !important; margin-top: 0px !important; margin-bottom: 2px !important; color: #444444 !important; font-weight: 500; }
     div[data-testid="stTextInput"] input { font-size: 18px !important; height: 45px !important; }
     div.stDownloadButton { margin-bottom: 4px !important; margin-top: 2px !important; }
-    div[data-testid="stImage"] { display: flex; justify-content: center; margin-bottom: 2px !important; }
+    .logo-container { display: flex; justify-content: center; margin-bottom: 5px; }
     hr { margin-top: 4px !important; margin-bottom: 6px !important; }
     </style>
     """,
@@ -49,28 +50,33 @@ def carregar_dados_do_excel():
 
 df_base = carregar_dados_do_excel()
 
-# 3. Classe do PDF Ajustada com Cabeçalho Compacto (Logo na Esquerda e Título Alinhado)
+# 3. Classe do PDF Ajustada com Textos Centralizados à Direita da Logo
 class PDF_Relatorio(FPDF):
     def header(self):
-        # Caso exista logo, posiciona na esquerda e coloca o título ao lado reduzindo o espaço vertical
         if os.path.exists(NOME_LOGOTIPO):
+            # Posiciona a imagem à esquerda
             self.image(NOME_LOGOTIPO, x=10, y=10, w=30)
-            self.set_xy(45, 15) # Move o cursor para o lado da imagem (X=45) e topo (Y=15)
+            # Define o início do texto após a imagem (X=45) e alinha verticalmente
+            self.set_xy(42, 16)
+            largura_texto = 158
         else:
             self.set_xy(10, 15)
+            largura_texto = 190
             
+        # Título principal centralizado no bloco da direita
         self.set_font("Arial", "B", 15)
-        self.cell(150, 8, "RELATÓRIO GERAL DE CORRIDAS", ln=True, align="L")
+        self.cell(largura_texto, 8, "RELATÓRIO GERAL DE CORRIDAS", ln=True, align="C")
         
         if os.path.exists(NOME_LOGOTIPO):
-            self.set_x(45)
+            self.set_x(42)
         else:
             self.set_x(10)
             
+        # Subtítulo explicativo centralizado no bloco da direita
         self.set_font("Arial", "", 9)
-        self.cell(150, 5, "Documento gerado automaticamente pelo aplicativo de busca.", ln=True, align="L")
+        self.cell(largura_texto, 5, "Documento gerado automaticamente pelo aplicativo de busca.", ln=True, align="C")
         
-        # Define uma linha limite firme antes de começar a tabela
+        # Margem fixa segura para iniciar a tabela de dados
         self.set_y(38)
         
         self.set_font("Arial", "B", 10)
@@ -114,11 +120,15 @@ def gerar_pdf(dados_df):
     return io.BytesIO(pdf_output)
 
 # 4. Desenho da Interface Final
-# Força a abertura real do arquivo de imagem para evitar travamentos de cache na tela
+# Método infalível usando Base64 HTML para forçar a renderização do logo e quebrar o cache do site
 if os.path.exists(NOME_LOGOTIPO):
     try:
-        img_tela = Image.open(NOME_LOGOTIPO)
-        st.image(img_tela, width=50)
+        with open(NOME_LOGOTIPO, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode()
+        st.markdown(
+            f'<div class="logo-container"><img src="data:image/png;base64,{encoded_string}" width="50"></div>',
+            unsafe_allow_html=True
+        )
     except:
         pass
 
