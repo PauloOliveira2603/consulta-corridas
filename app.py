@@ -1,4 +1,5 @@
 import os
+import io
 import pandas as pd
 import streamlit as st
 from fpdf import FPDF
@@ -40,7 +41,7 @@ def carregar_dados_do_excel():
 
 df_base = carregar_dados_do_excel()
 
-# 3. Função Corrigida para Gerar o Relatório PDF convertido em Bytes
+# 3. Função Corrigida e Atualizada para Gerar o Relatório PDF em Bytes Reais
 def gerar_pdf(dados_df):
     pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -84,11 +85,11 @@ def gerar_pdf(dados_df):
         pdf.cell(25, 7, str(row['CEP']), border=1, align="C")
         pdf.ln()
         
-    # CORREÇÃO CRUCIAL: Retorna os dados como bytearray bruto exigido pelo Streamlit
-    return bytearray(pdf.output())
+    # Retorna o arquivo de forma limpa usando a memória em formato binário estável
+    return io.BytesIO(pdf.output().encode('latin1'))
 
-# 4. Desenho da Tela do Aplicativo (Com Logotipo Superior)
-col1, col2 = st.columns()
+# 4. CORREÇÃO DA LINHA 91: Adicionado o número 2 dentro de st.columns()
+col1, col2 = st.columns(2)
 with col1:
     if os.path.exists(NOME_LOGOTIPO):
         st.image(NOME_LOGOTIPO, width=90)
