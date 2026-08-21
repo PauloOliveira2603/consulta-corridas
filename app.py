@@ -1,10 +1,8 @@
 import os
 import io
-import base64
 import pandas as pd
 import streamlit as st
 from fpdf import FPDF
-from PIL import Image
 
 # 1. Configurações Visuais para Celular
 st.set_page_config(page_title="Consulta de Dados", layout="centered")
@@ -25,7 +23,9 @@ st.markdown(
 )
 
 NOME_ARQUIVO_EXCEL = "Controle corridas NOVO.xlsx"
-NOME_LOGOTIPO = "logotipo.png"
+
+# Link público e direto da imagem do carro hospedada no seu próprio GitHub
+URL_LOGOTIPO = "https://githubusercontent.com"
 
 # 2. Função para carregar e limpar a base de dados
 @st.cache_data(ttl=30)
@@ -50,24 +50,27 @@ def carregar_dados_do_excel():
 
 df_base = carregar_dados_do_excel()
 
-# 3. Classe do PDF Ajustada: Centralização Matemática Corrigida (Margens Fixas)
+# 3. Classe do PDF com Centralização Matemática Corrigida (Margens Totais)
 class PDF_Relatorio(FPDF):
     def header(self):
-        if os.path.exists(NOME_LOGOTIPO):
-            self.image(NOME_LOGOTIPO, x=10, y=10, w=30)
+        # Desenha a imagem no canto esquerdo usando a URL direta da internet
+        try:
+            self.image(URL_LOGOTIPO, x=15, y=10, w=30)
+        except:
+            pass
         
-        # Correção da Centralização: Independentemente de ter logo ou não, o título usa a largura total restante (160mm)
-        # e centraliza o texto exatamente dentro desse bloco, evitando que ele vá muito para a direita
-        self.set_xy(40, 16)
+        # Joga o título para começar abaixo da linha do logo (Y=16) ocupando a folha toda
+        self.set_xy(10, 16)
         self.set_font("Arial", "B", 15)
-        self.cell(160, 8, "RELATÓRIO GERAL DE CORRIDAS", ln=True, align="C")
+        # O tamanho 200 força o texto a se centralizar usando as duas extremidades da folha como base
+        self.cell(200, 8, "RELATÓRIO GERAL DE CORRIDAS", ln=True, align="C")
         
-        self.set_x(40)
+        self.set_x(10)
         self.set_font("Arial", "", 9)
-        self.cell(160, 5, "Documento gerado automaticamente pelo aplicativo de busca.", ln=True, align="C")
+        self.cell(200, 5, "Documento gerado automaticamente pelo aplicativo de busca.", ln=True, align="C")
         
-        # Margem de segurança rígida para soltar a tabela de dados
-        self.set_y(38)
+        # Margem rígida para iniciar a tabela sem sobreposição
+        self.set_y(40)
         
         self.set_font("Arial", "B", 10)
         self.set_fill_color(230, 230, 230)
@@ -109,20 +112,11 @@ def gerar_pdf(dados_df):
         return io.BytesIO(pdf_output.encode('latin1'))
     return io.BytesIO(pdf_output)
 
-# 4. Desenho da Interface Final
-# Força a conversão do arquivo usando PIL antes de transformar em base64 (corrige o bug de formato renomeado)
-if os.path.exists(NOME_LOGOTIPO):
-    try:
-        img_pil = Image.open(NOME_LOGOTIPO)
-        buffer = io.BytesIO()
-        img_pil.save(buffer, format="PNG") # Força a conversão real em código de memória PNG
-        encoded_string = base64.b64encode(buffer.getvalue()).decode()
-        st.markdown(
-            f'<div class="logo-container"><img src="data:image/png;base64,{encoded_string}" width="50"></div>',
-            unsafe_allow_html=True
-        )
-    except:
-        pass
+# 4. Desenho da Interface Final (Renderização via URL)
+st.markdown(
+    f'<div class="logo-container"><img src="{URL_LOGOTIPO}" width="55"></div>',
+    unsafe_allow_html=True
+)
 
 st.markdown('<div class="custom-title">Consulta de Corridas</div>', unsafe_allow_html=True)
 
