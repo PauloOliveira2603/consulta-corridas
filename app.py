@@ -4,26 +4,28 @@ import pandas as pd
 import streamlit as st
 from fpdf import FPDF
 
-# 1. Configurações Visuais para Celular e Redução Extrema de Espaços (Margens)
+# 1. Configurações Visuais Avançadas (Cores, Fontes e Margens Coladas)
 st.set_page_config(page_title="Consulta de Dados", layout="centered")
 
 st.markdown(
     """
     <style>
-    /* Reduz o espaço em branco no topo de toda a página */
-    .block-container { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; padding-left: 1rem; padding-right: 1rem; }
+    /* Compacta o topo e as laterais para telas de celular */
+    .block-container { padding-top: 0.2rem !important; padding-bottom: 0.5rem !important; padding-left: 1rem; padding-right: 1rem; }
     
-    /* Configuração do campo de digitação */
+    /* Título em Azul Escuro e tamanho menor */
+    .custom-title { font-size: 26px !important; font-weight: bold !important; color: #0f4c81 !important; text-align: center !important; margin-top: 2px !important; margin-bottom: 2px !important; padding: 0px !important; }
+    
+    /* Configuração padrão para os textos explicativos */
+    .custom-text { text-align: center !important; font-size: 14px !important; margin-top: 0px !important; margin-bottom: 6px !important; color: #444444 !important; }
+    
+    /* Ajuste da caixa de digitação */
     div[data-testid="stTextInput"] input { font-size: 18px !important; height: 45px !important; }
     
-    /* Junta o título e textos compactando as margens */
-    .stTitle { font-size: 24px !important; text-align: center !important; margin-top: 0px !important; margin-bottom: 2px !important; padding: 0px !important; }
-    .stWrite, p { text-align: center !important; margin-top: 0px !important; margin-bottom: 5px !important; padding: 0px !important; }
-    
-    /* Espaçamento colado para a linha divisória e elementos secundários */
-    hr { margin-top: 5px !important; margin-bottom: 10px !important; }
-    div[data-testid="stImage"] { margin-bottom: 2px !important; }
-    div.stDownloadButton { margin-bottom: 5px !important; }
+    /* Ajuste das margens do botão de download e imagens */
+    div.stDownloadButton { margin-bottom: 4px !important; margin-top: 2px !important; }
+    div[data-testid="stImage"] { display: flex; justify-content: center; margin-bottom: 2px !important; }
+    hr { margin-top: 4px !important; margin-bottom: 8px !important; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -106,15 +108,15 @@ def gerar_pdf(dados_df):
         return io.BytesIO(pdf_output.encode('latin1'))
     return io.BytesIO(pdf_output)
 
-# 4. Desenho da Interface Compacta para Celular
-# Logotipo bem pequeno (apenas detalhe) e centralizado
+# 4. Desenho da Interface com a Ordem Nova Solicitada
+# Logotipo muito pequeno centralizado no topo sem sobrepor nada
 if os.path.exists(NOME_LOGOTIPO):
-    st.image(NOME_LOGOTIPO, width=55)
+    st.image(NOME_LOGOTIPO, width=50)
 
-st.title("Consulta de Corridas")
-st.write("Digite qualquer parte da Rua, Bairro ou CEP.")
+# Título customizado em Azul Escuro menor
+st.markdown('<div class="custom-title">Consulta de Corridas</div>', unsafe_allow_html=True)
 
-# Botão de Download do PDF Dinâmico
+# Botão de Download do PDF Dinâmico logo abaixo do título
 if not df_base.empty:
     pdf_bytes = gerar_pdf(df_base)
     st.download_button(
@@ -125,9 +127,12 @@ if not df_base.empty:
         use_container_width=True
     )
 
+# Texto explicativo reposicionado para DEPOIS do botão
+st.markdown('<div class="custom-text">Digite qualquer parte da Rua, Bairro ou CEP.</div>', unsafe_allow_html=True)
+
 st.write("---")
 
-# Campo de busca interativo colado logo abaixo
+# Campo de busca interativo colado logo em seguida
 busca = st.text_input("Digite sua busca aqui:", value="", placeholder="Ex: lig, realengo...")
 
 if busca.strip() != "" and not df_base.empty:
