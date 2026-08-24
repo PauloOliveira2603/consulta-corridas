@@ -4,26 +4,17 @@ import pandas as pd
 import streamlit as st
 from fpdf import FPDF
 
-# 1. Configurações Visuais para Celular (Alinhamento Central Perfeito)
+# 1. Configurações Visuais para Celular
 st.set_page_config(page_title="Consulta de Dados", layout="centered")
 
 st.markdown(
     """
     <style>
-    /* Compacta as margens da página */
     .block-container { padding-top: 2.0rem !important; padding-bottom: 0.5rem !important; padding-left: 1rem; padding-right: 1rem; }
-    
-    /* TRUQUE DO ALINHAMENTO: Força o título a se alinhar de forma absoluta ao centro da tela */
     .custom-title { font-size: 28px !important; font-weight: bold !important; color: #0f4c81 !important; text-align: center !important; margin-top: 0px !important; margin-bottom: 12px !important; padding: 0px !important; width: 100%; display: block; }
-    
-    /* Força o botão de download a ficar centralizado e com a mesma simetria do título */
     div.stDownloadButton { display: flex; justify-content: center; margin-bottom: 4px !important; margin-top: 2px !important; width: 100%; }
     div.stDownloadButton button { margin: 0 auto !important; display: block !important; }
-    
-    /* Alinha o texto explicativo à esquerda com margem colada abaixo */
     .custom-text { text-align: left !important; font-size: 14px !important; margin-top: 0px !important; margin-bottom: 2px !important; color: #444444 !important; font-weight: 500; }
-    
-    /* Estilização da caixa de entrada de texto */
     div[data-testid="stTextInput"] input { font-size: 18px !important; height: 45px !important; }
     hr { margin-top: 4px !important; margin-bottom: 6px !important; }
     </style>
@@ -44,20 +35,26 @@ def carregar_dados_do_excel():
         df.columns = [c.strip().title() for c in df.columns]
         df = df.dropna(subset=["Rua"])
         
+        # Garante tratamento numérico estável para as validações
+        df["Grupo_Num"] = pd.to_numeric(df["Grupo"], errors='coerce').fillna(0).astype(int)
+        df["Valor_Num"] = pd.to_numeric(df["Valor"], errors='coerce').fillna(0.0)
+        
         df["Rua"] = df["Rua"].astype(str).str.strip()
         df["Bairro"] = df["Bairro"].astype(str).str.strip()
         df["Cep"] = df["Cep"].astype(str).str.strip()
         df["Km"] = df["Km"].astype(str).str.replace('"', '', regex=False).str.replace('.', ',', regex=False)
         
-        df["Valor_Num"] = pd.to_numeric(df["Valor"], errors='coerce').fillna(0.0)
         df["Valor_Tela"] = df["Valor_Num"].map(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        
+        # Ordena a base por grupo para que a quebra visual no relatório funcione perfeitamente
+        df = df.sort_values(by="Grupo_Num").reset_index(drop=True)
         return df
     except:
         return pd.DataFrame()
 
 df_base = carregar_dados_do_excel()
 
-# 3. Classe do PDF com Centralização Independente do Logotipo
+# 3. Classe do PDF com Linha Divisória de Grupos e Destaque Vermelho para Aumentos
 class PDF_Relatorio(FPDF):
     def header(self):
         if os.path.exists(NOME_LOGOTIPO):
@@ -99,11 +96,30 @@ def gerar_pdf(dados_df):
     pdf.set_auto_page_break(auto=True, margin=20)
     pdf.add_page()
     
-    pdf.set_font("Arial", "", 9)
+    ultimo_grupo = None
+    
     for _, row in dados_df.iterrows():
+        # Regra 1: Se mudou o grupo em relação à linha anterior, desenha uma linha preta espessa de divisão
+        if ultimo_grupo is not None and row['Grupo_Num'] != ultimo_grupo:
+            pdf.set_line_width(0.8) # Engrossa a linha
+            pdf.set_draw_color(0, 0, 0) # Cor preta
+            pdf.cell(190, 1, "", border="T", ln=True) # Desenha a linha horizontal
+            pdf.set_line_width(0.2) # Restaura a espessura padrão da linha
+            pdf.set_draw_color(0, 0, 0)
+            
+        ultimo_grupo = row['Grupo_Num']
+        
+        # Regra 2: Se Grupo for diferente de Valor, pinta o texto de vermelho. Caso contrário, usa preto.
+        if int(row['Grupo_Num']) != int(row['Valor_Num']):
+            pdf.set_text_color(200, 0, 0) # Vermelho
+            pdf.set_font("Arial", "B", 9)  # Negrito para dar mais atenção
+        else:
+            pdf.set_text_color(0, 0, 0) # Preto
+            pdf.set_font("Arial", "", 9)
+            
         valor_formatado = f"R$ {row['Valor_Num']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         
-        pdf.cell(15, 7, str(int(row['Grupo'])), border=1, align="C")
+        pdf.cell(15, 7, str(row['Grupo_Num']), border=1, align="C")
         pdf.cell(75, 7, str(row['Rua'])[:38], border=1)
         pdf.cell(25, 7, valor_formatado, border=1, align="C")
         pdf.cell(20, 7, str(row['Km']), border=1, align="C")
@@ -116,8 +132,7 @@ def gerar_pdf(dados_df):
         return io.BytesIO(pdf_output.encode('latin1'))
     return io.BytesIO(pdf_output)
 
-# 4. Desenho da Interface Prática
-# Título em bloco HTML para garantir o alinhamento central absoluto
+# 4. Desenho da Interface
 st.markdown('<div class="custom-title">Consulta de Corridas</div>', unsafe_allow_html=True)
 
 if not df_base.empty:
@@ -131,7 +146,6 @@ if not df_base.empty:
     )
 
 st.write("---")
-
 st.markdown('<div class="custom-text">Digite qualquer parte da Rua, Bairro ou CEP.</div>', unsafe_allow_html=True)
 
 busca = st.text_input("Digite sua busca aqui:", value="", placeholder="Ex: lig, realengo...")
@@ -149,15 +163,22 @@ if busca.strip() != "" and not df_base.empty:
     else:
         st.success(f"✅ {len(resultado)} resultados encontrados:")
         for idx, row in resultado.iterrows():
+            
+            # Validação na Tela: Altera as variáveis de estilo CSS caso haja aumento (Grupo != Valor)
+            houve_aumento = int(row['Grupo_Num']) != int(row['Valor_Num'])
+            cor_texto_principal = "#c80000" if houve_aumento else "#1a1a1a"
+            peso_fonte = "bold" if houve_aumento else "normal"
+            
             with st.container():
                 st.markdown(
                     f"""
                     <div style="background-color: #f1f3f6; padding: 15px; border-radius: 10px; margin-bottom: 12px; border-left: 6px solid #2e7d32;">
-                        <h3 style="margin: 0; font-size: 18px; color: #1a1a1a;">🗺️ {row['Rua']}</h3>
-                        <p style="margin: 5px 0 0 0; font-size: 15px; color: #555;"><b>Bairro:</b> {row['Bairro']} | <b>CEP:</b> {row['Cep']}</p>
+                        <h3 style="margin: 0; font-size: 18px; color: {cor_texto_principal}; font-weight: {peso_fonte};">🗺️ {row['Rua']}</h3>
+                        <p style="margin: 5px 0 0 0; font-size: 15px; color: {cor_texto_principal};"><b>Bairro:</b> {row['Bairro']} | <b>CEP:</b> {row['Cep']}</p>
                         <hr style="margin: 8px 0; border: 0; border-top: 1px solid #ddd;">
                         <span style="font-size: 20px; font-weight: bold; color: #2e7d32; background-color: #e8f5e9; padding: 3px 8px; border-radius: 5px;">💰 {row['Valor_Tela']}</span>
                         <span style="font-size: 16px; font-weight: bold; color: #1565c0; background-color: #e3f2fd; padding: 3px 8px; border-radius: 5px; margin-left: 10px;">📏 {row['Km']} KM</span>
+                        <span style="font-size: 16px; font-weight: bold; color: #37474f; background-color: #eceff1; padding: 3px 8px; border-radius: 5px; margin-left: 10px;">👥 GRUPO {row['Grupo_Num']}</span>
                     </div>
                     """, 
                     unsafe_allow_html=True
