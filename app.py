@@ -35,7 +35,6 @@ def carregar_dados_do_excel():
         df.columns = [c.strip().title() for c in df.columns]
         df = df.dropna(subset=["Rua"])
         
-        # Garante tratamento numérico estável para as validações
         df["Grupo_Num"] = pd.to_numeric(df["Grupo"], errors='coerce').fillna(0).astype(int)
         df["Valor_Num"] = pd.to_numeric(df["Valor"], errors='coerce').fillna(0.0)
         
@@ -46,7 +45,6 @@ def carregar_dados_do_excel():
         
         df["Valor_Tela"] = df["Valor_Num"].map(lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
         
-        # Ordena a base por grupo para que a quebra visual no relatório funcione perfeitamente
         df = df.sort_values(by="Grupo_Num").reset_index(drop=True)
         return df
     except:
@@ -54,9 +52,13 @@ def carregar_dados_do_excel():
 
 df_base = carregar_dados_do_excel()
 
-# 3. Classe do PDF com Linha Divisória de Grupos e Destaque Vermelho para Aumentos
+# 3. Classe do PDF com Correção de Cor no Cabeçalho
 class PDF_Relatorio(FPDF):
     def header(self):
+        # CORREÇÃO CRUCIAL: Força o reset de cor para preto e estilo normal antes de desenhar o cabeçalho
+        self.set_text_color(0, 0, 0)
+        self.set_font("Arial", "", 10)
+        
         if os.path.exists(NOME_LOGOTIPO):
             try:
                 self.image(NOME_LOGOTIPO, x=10, y=10, w=30)
@@ -73,6 +75,7 @@ class PDF_Relatorio(FPDF):
         
         self.set_y(40)
         
+        # Desenha os títulos da tabela sempre em negrito e cor preta estável
         self.set_font("Arial", "B", 10)
         self.set_fill_color(230, 230, 230)
         self.cell(15, 8, "Grupo", border=1, align="C", fill=True)
@@ -83,13 +86,6 @@ class PDF_Relatorio(FPDF):
         self.cell(25, 8, "CEP", border=1, align="C", fill=True)
         self.ln()
 
-    def footer(self):
-        self.set_y(-15)
-        self.set_font("Arial", "I", 9)
-        self.set_text_color(100, 100, 100)
-        texto_pagina = f"Página {self.page_no()} de {{nb}}"
-        self.cell(0, 10, texto_pagina, align="C")
-
 def gerar_pdf(dados_df):
     pdf = PDF_Relatorio(orientation="P", unit="mm", format="A4")
     pdf.alias_nb_pages() 
@@ -98,23 +94,23 @@ def gerar_pdf(dados_df):
     
     ultimo_grupo = None
     
+    pdf.set_font("Arial", "", 9)
     for _, row in dados_df.iterrows():
-        # Regra 1: Se mudou o grupo em relação à linha anterior, desenha uma linha preta espessa de divisão
         if ultimo_grupo is not None and row['Grupo_Num'] != ultimo_grupo:
-            pdf.set_line_width(0.8) # Engrossa a linha
-            pdf.set_draw_color(0, 0, 0) # Cor preta
-            pdf.cell(190, 1, "", border="T", ln=True) # Desenha a linha horizontal
-            pdf.set_line_width(0.2) # Restaura a espessura padrão da linha
+            pdf.set_line_width(0.8)
+            pdf.set_draw_color(0, 0, 0)
+            pdf.cell(190, 1, "", border="T", ln=True)
+            pdf.set_line_width(0.2)
             pdf.set_draw_color(0, 0, 0)
             
         ultimo_grupo = row['Grupo_Num']
         
-        # Regra 2: Se Grupo for diferente de Valor, pinta o texto de vermelho. Caso contrário, usa preto.
+        # Aplica a cor vermelha estritamente para as linhas com alteração tarifária
         if int(row['Grupo_Num']) != int(row['Valor_Num']):
-            pdf.set_text_color(200, 0, 0) # Vermelho
-            pdf.set_font("Arial", "B", 9)  # Negrito para dar mais atenção
+            pdf.set_text_color(200, 0, 0)
+            pdf.set_font("Arial", "B", 9)
         else:
-            pdf.set_text_color(0, 0, 0) # Preto
+            pdf.set_text_color(0, 0, 0)
             pdf.set_font("Arial", "", 9)
             
         valor_formatado = f"R$ {row['Valor_Num']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -163,8 +159,6 @@ if busca.strip() != "" and not df_base.empty:
     else:
         st.success(f"✅ {len(resultado)} resultados encontrados:")
         for idx, row in resultado.iterrows():
-            
-            # Validação na Tela: Altera as variáveis de estilo CSS caso haja aumento (Grupo != Valor)
             houve_aumento = int(row['Grupo_Num']) != int(row['Valor_Num'])
             cor_texto_principal = "#c80000" if houve_aumento else "#1a1a1a"
             peso_fonte = "bold" if houve_aumento else "normal"
@@ -178,7 +172,8 @@ if busca.strip() != "" and not df_base.empty:
                         <hr style="margin: 8px 0; border: 0; border-top: 1px solid #ddd;">
                         <span style="font-size: 20px; font-weight: bold; color: #2e7d32; background-color: #e8f5e9; padding: 3px 8px; border-radius: 5px;">💰 {row['Valor_Tela']}</span>
                         <span style="font-size: 16px; font-weight: bold; color: #1565c0; background-color: #e3f2fd; padding: 3px 8px; border-radius: 5px; margin-left: 10px;">📏 {row['Km']} KM</span>
-                        <span style="font-size: 16px; font-weight: bold; color: #37474f; background-color: #eceff1; padding: 3px 8px; border-radius: 5px; margin-left: 10px;">👥 GRUPO {row['Grupo_Num']}</span>
+                        <!-- CORREÇÃO VISUAL: Removido o texto GRUPO para economizar espaço de tela móvel -->
+                        <span style="font-size: 16px; font-weight: bold; color: #37474f; background-color: #eceff1; padding: 3px 8px; border-radius: 5px; margin-left: 10px;">👥 {row['Grupo_Num']}</span>
                     </div>
                     """, 
                     unsafe_allow_html=True
