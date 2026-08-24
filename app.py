@@ -52,10 +52,10 @@ def carregar_dados_do_excel():
 
 df_base = carregar_dados_do_excel()
 
-# 3. Classe do PDF com Correção de Cor no Cabeçalho
+# 3. Classe do PDF com Correção de Cor no Cabeçalho e Rodapé de Páginas Ativado
 class PDF_Relatorio(FPDF):
     def header(self):
-        # CORREÇÃO CRUCIAL: Força o reset de cor para preto e estilo normal antes de desenhar o cabeçalho
+        # Força o reset de cor para preto e estilo normal antes de desenhar o cabeçalho
         self.set_text_color(0, 0, 0)
         self.set_font("Arial", "", 10)
         
@@ -85,6 +85,17 @@ class PDF_Relatorio(FPDF):
         self.cell(30, 8, "Bairro", border=1, fill=True)
         self.cell(25, 8, "CEP", border=1, align="C", fill=True)
         self.ln()
+
+    # CORREÇÃO CRUCIAL: Adicionada novamente a função de paginação que havia sumido
+    def footer(self):
+        # Posiciona o cursor a 15 mm do final da folha
+        self.set_y(-15)
+        self.set_font("Arial", "I", 9)
+        self.set_text_color(100, 100, 100)
+        
+        # Gera dinamicamente o texto "Página X de Y"
+        texto_pagina = f"Página {self.page_no()} de {{nb}}"
+        self.cell(0, 10, texto_pagina, align="C")
 
 def gerar_pdf(dados_df):
     pdf = PDF_Relatorio(orientation="P", unit="mm", format="A4")
@@ -172,7 +183,6 @@ if busca.strip() != "" and not df_base.empty:
                         <hr style="margin: 8px 0; border: 0; border-top: 1px solid #ddd;">
                         <span style="font-size: 20px; font-weight: bold; color: #2e7d32; background-color: #e8f5e9; padding: 3px 8px; border-radius: 5px;">💰 {row['Valor_Tela']}</span>
                         <span style="font-size: 16px; font-weight: bold; color: #1565c0; background-color: #e3f2fd; padding: 3px 8px; border-radius: 5px; margin-left: 10px;">📏 {row['Km']} KM</span>
-                        <!-- CORREÇÃO VISUAL: Removido o texto GRUPO para economizar espaço de tela móvel -->
                         <span style="font-size: 16px; font-weight: bold; color: #37474f; background-color: #eceff1; padding: 3px 8px; border-radius: 5px; margin-left: 10px;">👥 {row['Grupo_Num']}</span>
                     </div>
                     """, 
